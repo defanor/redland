@@ -11,7 +11,8 @@ Utility functions based on mid-level bindings.
 module Redland.Util where
 
 import Foreign
-import Control.Exception
+import Control.Monad
+import Data.Maybe
 
 import Redland.LowLevel
 import Redland.MidLevel
@@ -28,6 +29,19 @@ withHash world factory l f =
   withNew (redlandHash world factory) $ \hash -> do
   mapM_ (uncurry (hashPutStrings hash)) l
   f hash
+
+
+-- * RDF Graph (librdf_model)
+
+withStatements :: ForeignPtr RedlandWorld
+               -> ForeignPtr RedlandModel
+               -> Triple
+               -> ([Triple] -> IO a)
+               -> IO a
+withStatements world model t f =
+  withNew (tripleToStatement world t) $ \statement ->
+  withNew (modelFindStatements model statement) $
+  streamToList >=> f
 
 
 -- * RDF term (librdf_node)
@@ -47,28 +61,29 @@ redlandNodeToNode rn = do
     (_, True, _) -> LiteralNode <$> nodeGetLiteralValue rn
     _ -> ResourceNode <$> (nodeGetURI rn >>= uriAsString)
 
+nodeToRedlandNode :: ForeignPtr RedlandWorld
+                  -> Node
+                  -> Initializer RedlandNode
+nodeToRedlandNode world (BlankNode s) = nodeFromBlankIdentifier world (Just s)
+nodeToRedlandNode world (LiteralNode s) = nodeFromLiteral world s Nothing False
+nodeToRedlandNode world (ResourceNode s) =
+  withNew (redlandURI world s) $ nodeFromURI world
+
 
 -- * Parsers
 
 -- | Tries different parsers until one of them succeeds.
-tryParseStringIntoModel :: ForeignPtr RedlandWorld
-                        -> [String]
-                        -- ^ parsers to try
-                        -> ForeignPtr RedlandModel
-                        -> ForeignPtr RedlandURI
-                        -- ^ base URI
-                        -> String
-                        -- ^ string to parse
-                        -> IO ()
-tryParseStringIntoModel world (parser:parsers) model uri str =
-  handle tryNext $
-  withNew (redlandParser world (Just parser) Nothing Nothing) $ \parser ->
-  parseStringIntoModel parser str uri model
-  where
-    tryNext :: RedlandException -> IO ()
-    tryNext (OperationException _) = tryParseStringIntoModel world parsers model uri str
-    tryNext e = throw e
-tryParseStringIntoModel world [] model uri str = throw ParseFailure
+guessingParseStringIntoModel :: ForeignPtr RedlandWorld
+                             -> ForeignPtr RedlandModel
+                             -> ForeignPtr RedlandURI
+                             -- ^ base URI
+                             -> String
+                             -- ^ string to parse
+                             -> IO ()
+guessingParseStringIntoModel world model uri str = do
+  parser <- parserGuessName2 world Nothing (Just str) Nothing
+  withNew (redlandParser world parser Nothing Nothing) $ \p ->
+    parseStringIntoModel p str uri model
 
 
 -- * Querying
@@ -85,8 +100,7 @@ withQuery :: ForeignPtr RedlandWorld
           -> IO a
 withQuery world model ql qs bURI f =
   withNew (redlandQuery world ql Nothing qs bURI) $ \query ->
-  withNew (modelQueryExecute model query) $ \results ->
-  queryResultsToList results >>= f
+  withNew (modelQueryExecute model query) $ queryResultsToList >=> f
 
 
 -- * Query results
@@ -110,6 +124,58 @@ queryResultsToList qr = do
           name <- queryResultsGetBindingName qr n
           val <- queryResultsGetBindingValue qr n >>= redlandNodeToNode
           pure (name, val)
+
+
+-- * RDF Triple (librdf_statement)
+
+data Triple = Triple { subject :: Maybe Node
+                     , predicate :: Maybe Node
+                     , object :: Maybe Node
+                     } deriving (Eq, Show)
+
+statementToTriple :: ForeignPtr RedlandStatement
+                  -> IO Triple
+statementToTriple statement = do
+  s <- componentToTriple statementGetSubject
+  p <- componentToTriple statementGetPredicate
+  o <- componentToTriple statementGetObject
+  pure $ Triple s p o
+  where
+    componentToTriple :: (ForeignPtr RedlandStatement ->
+                          IO (Maybe (ForeignPtr RedlandNode)))
+                      -> IO (Maybe Node)
+    componentToTriple f = do
+      c <- f statement
+      case c of
+        Just c' -> Just <$> redlandNodeToNode c'
+        Nothing -> pure Nothing
+
+tripleToStatement :: ForeignPtr RedlandWorld
+                  -> Triple
+                  -> Initializer RedlandStatement
+tripleToStatement world (Triple s p o) = do
+  statement <- redlandStatement world
+  let maybeSet f mn = case mn of
+        Just n -> withNew (nodeToRedlandNode world n) $ \n' ->
+          f statement (Just n')
+        Nothing -> pure ()
+  maybeSet statementSetSubject s
+  maybeSet statementSetPredicate p
+  maybeSet statementSetObject o
+  pure statement
+
+-- * Stream of triples (librdf_statement)
+
+streamToList :: ForeignPtr RedlandStream -> IO [Triple]
+streamToList stream = do
+  done <- streamEnd stream
+  if done
+    then pure []
+    else do
+    triple <- streamGetObject stream >>= statementToTriple
+    next <- streamNext stream
+    rest <- if next then streamToList stream else pure []
+    pure (triple : rest)
 
 
 -- * Other

@@ -135,6 +135,11 @@ foreign import ccall "librdf_free_node"
 foreign import ccall "redland.h &librdf_free_node"
   p_librdf_free_node :: FinalizerPtr RedlandNode
 
+foreign import ccall "librdf_new_node_from_node"
+  librdf_new_node_from_node
+  :: Ptr RedlandNode
+  -- ^ old node
+  -> IO (Ptr RedlandNode)
 foreign import ccall "librdf_new_node_from_blank_identifier"
   librdf_new_node_from_blank_identifier
   :: Ptr RedlandWorld
@@ -230,6 +235,20 @@ foreign import ccall "librdf_parser_parse_string_into_model"
   -> IO CInt
   -- ^ non-zero on failure
 
+-- librdf_parser_guess_name always fails, skipping it
+
+foreign import ccall "librdf_parser_guess_name2"
+  librdf_parser_guess_name2
+  :: Ptr RedlandWorld
+  -> CString
+  -- ^ MIME type or NULL
+  -> CString
+  -- ^ content buffer or NULL
+  -> CString
+  -- ^ content identifier or NULL
+  -> IO CString
+  -- ^ parser name or NULL
+
 
 -- * Querying
 
@@ -313,6 +332,50 @@ foreign import ccall "librdf_free_statement"
 foreign import ccall "redland.h &librdf_free_statement"
   p_librdf_free_statement :: FinalizerPtr RedlandStatement
 
+-- | "The node objects become owned by the new statement (or freed on
+-- error)."
+foreign import ccall "librdf_new_statement_from_nodes"
+  librdf_new_statement_from_nodes
+  :: Ptr RedlandWorld
+  -> Ptr RedlandNode
+  -> Ptr RedlandNode
+  -> Ptr RedlandNode
+  -> IO (Ptr RedlandStatement)
+foreign import ccall "librdf_new_statement_from_statement"
+  librdf_new_statement_from_statement
+  :: Ptr RedlandStatement
+  -> IO (Ptr RedlandStatement)
+
+foreign import ccall "librdf_statement_get_subject"
+  librdf_statement_get_subject
+  :: Ptr RedlandStatement
+  -> IO (Ptr RedlandNode)
+  -- ^ the returned node is shared, should be copied
+foreign import ccall "librdf_statement_set_subject"
+  librdf_statement_set_subject
+  :: Ptr RedlandStatement
+  -> Ptr RedlandNode
+  -- ^ becomes owned by the statement
+  -> IO ()
+foreign import ccall "librdf_statement_get_predicate"
+  librdf_statement_get_predicate
+  :: Ptr RedlandStatement
+  -> IO (Ptr RedlandNode)
+foreign import ccall "librdf_statement_set_predicate"
+  librdf_statement_set_predicate
+  :: Ptr RedlandStatement
+  -> Ptr RedlandNode
+  -> IO ()
+foreign import ccall "librdf_statement_get_object"
+  librdf_statement_get_object
+  :: Ptr RedlandStatement
+  -> IO (Ptr RedlandNode)
+foreign import ccall "librdf_statement_set_object"
+  librdf_statement_set_object
+  :: Ptr RedlandStatement
+  -> Ptr RedlandNode
+  -> IO ()
+
 
 -- * Triple stores
 
@@ -355,6 +418,16 @@ foreign import ccall "librdf_free_stream"
   librdf_free_stream :: Ptr RedlandStream -> IO ()
 foreign import ccall "redland.h &librdf_free_stream"
   p_librdf_free_stream :: FinalizerPtr RedlandStream
+
+foreign import ccall "librdf_stream_end"
+  librdf_stream_end :: Ptr RedlandStream -> IO CInt
+foreign import ccall "librdf_stream_next"
+  librdf_stream_next :: Ptr RedlandStream -> IO CInt
+foreign import ccall "librdf_stream_get_object"
+  librdf_stream_get_object
+  :: Ptr RedlandStream
+  -> IO (Ptr RedlandStatement)
+  -- ^ a shared statement, should be copied
 
 
 -- * URI
