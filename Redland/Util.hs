@@ -20,6 +20,7 @@ import Redland.MidLevel
 
 -- * Hashes
 
+-- | Mostly a conversion function.
 withHash :: ForeignPtr RedlandWorld
          -> String
          -> [(String, String)]
@@ -33,6 +34,7 @@ withHash world factory l f =
 
 -- * RDF Graph (librdf_model)
 
+-- | Wrapper around 'modelFindStatements'.
 withStatements :: ForeignPtr RedlandWorld
                -> ForeignPtr RedlandModel
                -> Triple
@@ -46,11 +48,13 @@ withStatements world model t f =
 
 -- * RDF term (librdf_node)
 
+-- | Haskell representation of 'RedlandNode'.
 data Node = BlankNode String
           | LiteralNode String
           | ResourceNode String
           deriving (Eq, Show)
 
+-- | A conversion function.
 redlandNodeToNode :: ForeignPtr RedlandNode -> IO Node
 redlandNodeToNode rn = do
   isBlank <- nodeIsBlank rn
@@ -61,6 +65,7 @@ redlandNodeToNode rn = do
     (_, True, _) -> LiteralNode <$> nodeGetLiteralValue rn
     _ -> ResourceNode <$> (nodeGetURI rn >>= uriAsString)
 
+-- | A conversion function.
 nodeToRedlandNode :: ForeignPtr RedlandWorld
                   -> Node
                   -> Initializer RedlandNode
@@ -72,7 +77,7 @@ nodeToRedlandNode world (ResourceNode s) =
 
 -- * Parsers
 
--- | Tries different parsers until one of them succeeds.
+-- | Guesses a parser name, and applies it.
 guessingParseStringIntoModel :: ForeignPtr RedlandWorld
                              -> ForeignPtr RedlandModel
                              -> ForeignPtr RedlandURI
@@ -81,13 +86,14 @@ guessingParseStringIntoModel :: ForeignPtr RedlandWorld
                              -- ^ string to parse
                              -> IO ()
 guessingParseStringIntoModel world model uri str = do
-  parser <- parserGuessName2 world Nothing (Just str) Nothing
-  withNew (redlandParser world parser Nothing Nothing) $ \p ->
+  parserName <- parserGuessName2 world Nothing (Just str) Nothing
+  withNew (redlandParser world parserName Nothing Nothing) $ \p ->
     parseStringIntoModel p str uri model
 
 
 -- * Querying
 
+-- | Querying helper.
 withQuery :: ForeignPtr RedlandWorld
           -> ForeignPtr RedlandModel
           -> String
@@ -107,6 +113,7 @@ withQuery world model ql qs bURI f =
 
 type QueryResults = [[(String, Node)]]
 
+-- | A conversion function.
 queryResultsToList :: ForeignPtr RedlandQueryResults -> IO QueryResults
 queryResultsToList qr = do
   done <- queryResultsFinished qr
@@ -128,11 +135,13 @@ queryResultsToList qr = do
 
 -- * RDF Triple (librdf_statement)
 
+-- | Haskell representation of 'RedlandStatement'.
 data Triple = Triple { subject :: Maybe Node
                      , predicate :: Maybe Node
                      , object :: Maybe Node
                      } deriving (Eq, Show)
 
+-- | A conversion function.
 statementToTriple :: ForeignPtr RedlandStatement
                   -> IO Triple
 statementToTriple statement = do
@@ -150,6 +159,7 @@ statementToTriple statement = do
         Just c' -> Just <$> redlandNodeToNode c'
         Nothing -> pure Nothing
 
+-- | A conversion function.
 tripleToStatement :: ForeignPtr RedlandWorld
                   -> Triple
                   -> Initializer RedlandStatement
@@ -166,6 +176,7 @@ tripleToStatement world (Triple s p o) = do
 
 -- * Stream of triples (librdf_statement)
 
+-- | A conversion function.
 streamToList :: ForeignPtr RedlandStream -> IO [Triple]
 streamToList stream = do
   done <- streamEnd stream
