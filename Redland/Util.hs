@@ -12,6 +12,7 @@ module Redland.Util where
 
 import Foreign
 import Control.Monad
+import Control.DeepSeq
 
 import Redland.LowLevel
 import Redland.MidLevel
@@ -51,11 +52,20 @@ data LiteralNodeType = XMLSchema String
                      | LanguageTag String
                      deriving (Ord, Eq, Show)
 
+instance NFData LiteralNodeType where
+  rnf (XMLSchema s) = rnf s
+  rnf (LanguageTag s) = rnf s
+
 -- | Haskell representation of 'RedlandNode'.
 data Node = BlankNode String
           | LiteralNode String (Maybe LiteralNodeType)
           | ResourceNode String
           deriving (Ord, Eq, Show)
+
+instance NFData Node where
+  rnf (BlankNode s) = rnf s
+  rnf (LiteralNode s t) = rnf s `seq` rnf t
+  rnf (ResourceNode s) = rnf s
 
 -- | A conversion function.
 redlandNodeToNode :: ForeignPtr RedlandNode -> IO Node
@@ -69,7 +79,6 @@ redlandNodeToNode rn = do
       litVal <- nodeGetLiteralValue rn
       litLang <- nodeGetLiteralValueLanguage rn
       litType <- nodeGetLiteralValueDatatypeURI rn
-      litXML <- nodeGetLiteralValueIsWellFormedXML rn
       let nType = case (litLang, litType) of
             (Just l, _) -> Just $ LanguageTag l
             (_, Just t) -> Just $ XMLSchema t
@@ -159,6 +168,9 @@ data Triple = Triple { subject :: Maybe Node
                      , object :: Maybe Node
                      } deriving (Ord, Eq, Show)
 
+instance NFData Triple where
+  rnf (Triple s p o) = rnf s `seq` rnf p `seq` rnf o
+
 -- | A conversion function.
 statementToTriple :: ForeignPtr RedlandStatement
                   -> IO Triple
@@ -211,21 +223,21 @@ streamToList stream = do
 
 -- | Initializes world, storage, model, and base URI at once.
 withWSMU :: String
-        -- ^ storage factory
-        -> [(String, String)]
-        -- ^ storage options
-        -> String
-        -- ^ storage identifier
-        -> String
-        -- ^ model options
-        -> String
-        -- ^ base URI
-        -> (ForeignPtr RedlandWorld ->
-             ForeignPtr RedlandStorage ->
-             ForeignPtr RedlandModel ->
-             ForeignPtr RedlandURI ->
-             IO a)
-        -> IO a
+         -- ^ storage factory
+         -> [(String, String)]
+         -- ^ storage options
+         -> String
+         -- ^ storage identifier
+         -> String
+         -- ^ model options
+         -> String
+         -- ^ base URI
+         -> (ForeignPtr RedlandWorld ->
+              ForeignPtr RedlandStorage ->
+              ForeignPtr RedlandModel ->
+              ForeignPtr RedlandURI ->
+              IO a)
+         -> IO a
 withWSMU sFactory sOpt sIdent mOpt bURI f =
   withNew redlandWorld $ \world ->
   withHash world "memory" sOpt $ \sOpt' ->
