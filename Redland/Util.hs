@@ -79,10 +79,10 @@ redlandNodeToNode rn = do
       litVal <- nodeGetLiteralValue rn
       litLang <- nodeGetLiteralValueLanguage rn
       litType <- nodeGetLiteralValueDatatypeURI rn
-      let nType = case (litLang, litType) of
-            (Just l, _) -> Just $ LanguageTag l
-            (_, Just t) -> Just $ XMLSchema t
-            _ -> Nothing
+      nType <- case (litLang, litType) of
+        (Just l, _) -> pure $ Just $ LanguageTag l
+        (_, Just t) -> Just . XMLSchema <$> uriAsString t
+        _ -> pure Nothing
       pure $ LiteralNode litVal nType
     _ -> ResourceNode <$> (nodeGetURI rn >>= uriAsString)
 

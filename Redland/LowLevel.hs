@@ -195,7 +195,7 @@ foreign import ccall "librdf_node_get_literal_value_language"
 foreign import ccall "librdf_node_get_literal_value_datatype_uri"
   librdf_node_get_literal_value_datatype_uri
   :: Ptr RedlandNode
-  -> IO CString
+  -> IO (Ptr RedlandURI)
   -- ^ Literal datatype URI, must be copied
 foreign import ccall "librdf_node_get_literal_value_is_wf_xml"
   librdf_node_get_literal_value_is_wf_xml

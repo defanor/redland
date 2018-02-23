@@ -289,10 +289,14 @@ nodeGetLiteralValueLanguage node =
   withForeignPtr node $
   librdf_node_get_literal_value_language >=> maybeSharedCString
 
-nodeGetLiteralValueDatatypeURI :: ForeignPtr RedlandNode -> IO (Maybe String)
+nodeGetLiteralValueDatatypeURI :: ForeignPtr RedlandNode
+                               -> IO (Maybe (ForeignPtr RedlandURI))
 nodeGetLiteralValueDatatypeURI node =
-  withForeignPtr node $
-  librdf_node_get_literal_value_datatype_uri >=> maybeSharedCString
+  withForeignPtr node $ \node' -> do
+  oldURI <- librdf_node_get_literal_value_datatype_uri node'
+  if oldURI == nullPtr
+    then pure Nothing
+    else Just <$> initialize (librdf_new_uri_from_uri oldURI) p_librdf_free_uri
 
 nodeGetLiteralValueIsWellFormedXML :: ForeignPtr RedlandNode -> IO Bool
 nodeGetLiteralValueIsWellFormedXML node =
