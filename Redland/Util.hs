@@ -212,8 +212,8 @@ streamToList stream = do
   done <- streamEnd stream
   if done
     then pure []
-    else do
-    triple <- streamGetObject stream >>= statementToTriple
+    else withNew (streamGetObject stream) $ \statement -> do
+    triple <- statementToTriple statement
     next <- streamNext stream
     rest <- if next then streamToList stream else pure []
     pure (triple : rest)
