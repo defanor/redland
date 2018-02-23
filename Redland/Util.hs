@@ -12,7 +12,6 @@ module Redland.Util where
 
 import Foreign
 import Control.Monad
-import Data.Maybe
 
 import Redland.LowLevel
 import Redland.MidLevel
@@ -52,7 +51,7 @@ withStatements world model t f =
 data Node = BlankNode String
           | LiteralNode String
           | ResourceNode String
-          deriving (Eq, Show)
+          deriving (Ord, Eq, Show)
 
 -- | A conversion function.
 redlandNodeToNode :: ForeignPtr RedlandNode -> IO Node
@@ -139,7 +138,7 @@ queryResultsToList qr = do
 data Triple = Triple { subject :: Maybe Node
                      , predicate :: Maybe Node
                      , object :: Maybe Node
-                     } deriving (Eq, Show)
+                     } deriving (Ord, Eq, Show)
 
 -- | A conversion function.
 statementToTriple :: ForeignPtr RedlandStatement
