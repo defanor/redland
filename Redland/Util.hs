@@ -47,9 +47,13 @@ withStatements world model t f =
 
 -- * RDF term (librdf_node)
 
+data LiteralNodeType = XMLSchema String
+                     | LanguageTag String
+                     deriving (Ord, Eq, Show)
+
 -- | Haskell representation of 'RedlandNode'.
 data Node = BlankNode String
-          | LiteralNode String
+          | LiteralNode String (Maybe LiteralNodeType)
           | ResourceNode String
           deriving (Ord, Eq, Show)
 
@@ -61,7 +65,16 @@ redlandNodeToNode rn = do
   isResource <- nodeIsResource rn
   case (isBlank, isLiteral, isResource) of
     (True, _, _) -> BlankNode <$> nodeGetBlankIdentifier rn
-    (_, True, _) -> LiteralNode <$> nodeGetLiteralValue rn
+    (_, True, _) -> do
+      litVal <- nodeGetLiteralValue rn
+      litLang <- nodeGetLiteralValueLanguage rn
+      litType <- nodeGetLiteralValueDatatypeURI rn
+      litXML <- nodeGetLiteralValueIsWellFormedXML rn
+      let nType = case (litLang, litType) of
+            (Just l, _) -> Just $ LanguageTag l
+            (_, Just t) -> Just $ XMLSchema t
+            _ -> Nothing
+      pure $ LiteralNode litVal nType
     _ -> ResourceNode <$> (nodeGetURI rn >>= uriAsString)
 
 -- | A conversion function.
@@ -69,7 +82,13 @@ nodeToRedlandNode :: ForeignPtr RedlandWorld
                   -> Node
                   -> Initializer RedlandNode
 nodeToRedlandNode world (BlankNode s) = nodeFromBlankIdentifier world (Just s)
-nodeToRedlandNode world (LiteralNode s) = nodeFromLiteral world s Nothing False
+nodeToRedlandNode world (LiteralNode s (Just (LanguageTag l))) =
+  nodeFromTypedLiteral world s (Just l) Nothing
+nodeToRedlandNode world (LiteralNode s (Just (XMLSchema uri))) =
+  withNew (redlandURI world uri) $ \uri' ->
+  nodeFromTypedLiteral world s Nothing (Just uri')
+nodeToRedlandNode world (LiteralNode s Nothing) =
+  nodeFromTypedLiteral world s Nothing Nothing
 nodeToRedlandNode world (ResourceNode s) =
   withNew (redlandURI world s) $ nodeFromURI world
 

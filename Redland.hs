@@ -55,13 +55,12 @@ descriptions.
 
 It prints the following:
 
->  [("foo",ResourceNode "http://www.dajobe.org/"),("bar",ResourceNode "http://purl.org/dc/elements/1.1/title"),("baz",LiteralNode "Dave Beckett's Home Page")]
->  [("foo",ResourceNode "http://www.dajobe.org/"),("bar",ResourceNode "http://purl.org/dc/elements/1.1/creator"),("baz",LiteralNode "Dave Beckett")]
->  [("foo",ResourceNode "http://www.dajobe.org/"),("bar",ResourceNode "http://purl.org/dc/elements/1.1/description"),("baz",LiteralNode "The generic home page of Dave Beckett.")]
->  Triple {subject = Just (ResourceNode "http://www.dajobe.org/"), predicate = Just (ResourceNode "http://purl.org/dc/elements/1.1/title"), object = Just (LiteralNode "Dave Beckett's Home Page")}
->  Triple {subject = Just (ResourceNode "http://www.dajobe.org/"), predicate = Just (ResourceNode "http://purl.org/dc/elements/1.1/creator"), object = Just (LiteralNode "Dave Beckett")}
->  Triple {subject = Just (ResourceNode "http://www.dajobe.org/"), predicate = Just (ResourceNode "http://purl.org/dc/elements/1.1/description"), object = Just (LiteralNode "The generic home page of Dave Beckett.")}
-
+> [("foo",ResourceNode "http://www.dajobe.org/"),("bar",ResourceNode "http://purl.org/dc/elements/1.1/title"),("baz",LiteralNode "Dave Beckett's Home Page" Nothing)]
+> [("foo",ResourceNode "http://www.dajobe.org/"),("bar",ResourceNode "http://purl.org/dc/elements/1.1/creator"),("baz",LiteralNode "Dave Beckett" Nothing)]
+> [("foo",ResourceNode "http://www.dajobe.org/"),("bar",ResourceNode "http://purl.org/dc/elements/1.1/description"),("baz",LiteralNode "The generic home page of Dave Beckett." Nothing)]
+> Triple {subject = Just (ResourceNode "http://www.dajobe.org/"), predicate = Just (ResourceNode "http://purl.org/dc/elements/1.1/title"), object = Just (LiteralNode "Dave Beckett's Home Page" Nothing)}
+> Triple {subject = Just (ResourceNode "http://www.dajobe.org/"), predicate = Just (ResourceNode "http://purl.org/dc/elements/1.1/creator"), object = Just (LiteralNode "Dave Beckett" Nothing)}
+> Triple {subject = Just (ResourceNode "http://www.dajobe.org/"), predicate = Just (ResourceNode "http://purl.org/dc/elements/1.1/description"), object = Just (LiteralNode "The generic home page of Dave Beckett." Nothing)}
 
 -}
 

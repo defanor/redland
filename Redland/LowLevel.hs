@@ -187,6 +187,21 @@ foreign import ccall "librdf_node_get_literal_value"
   :: Ptr RedlandNode
   -> IO CString
   -- ^ Literal value, must be copied
+foreign import ccall "librdf_node_get_literal_value_language"
+  librdf_node_get_literal_value_language
+  :: Ptr RedlandNode
+  -> IO CString
+  -- ^ Literal language value, must be copied
+foreign import ccall "librdf_node_get_literal_value_datatype_uri"
+  librdf_node_get_literal_value_datatype_uri
+  :: Ptr RedlandNode
+  -> IO CString
+  -- ^ Literal datatype URI, must be copied
+foreign import ccall "librdf_node_get_literal_value_is_wf_xml"
+  librdf_node_get_literal_value_is_wf_xml
+  :: Ptr RedlandNode
+  -> IO CInt
+  -- ^ 0 if it's not well formed XML
 foreign import ccall "librdf_node_get_uri"
   librdf_node_get_uri
   :: Ptr RedlandNode

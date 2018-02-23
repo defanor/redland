@@ -250,12 +250,12 @@ nodeFromTypedLiteral :: ForeignPtr RedlandWorld
                      -> Maybe String
                      -> Maybe (ForeignPtr RedlandURI)
                      -> Initializer RedlandNode
-nodeFromTypedLiteral world val xmlLang litType =
+nodeFromTypedLiteral world val xmlLang uri =
   withForeignPtr world $ \world' ->
   withCString val $ \val' ->
   withNullablePtr withCString xmlLang $ \xmlLang' ->
-  withNullablePtr withForeignPtr litType $ \litType' ->
-  initialize (librdf_new_node_from_typed_literal world' val' xmlLang' litType')
+  withNullablePtr withForeignPtr uri $ \uri' ->
+  initialize (librdf_new_node_from_typed_literal world' val' xmlLang' uri')
   p_librdf_free_node
 
 nodeFromURI :: ForeignPtr RedlandWorld
@@ -278,13 +278,25 @@ nodeFromURIString world uriStr =
 
 nodeGetBlankIdentifier :: ForeignPtr RedlandNode -> IO String
 nodeGetBlankIdentifier node =
-  withForeignPtr node $
-  librdf_node_get_blank_identifier >=> justSharedCString
+  withForeignPtr node $ librdf_node_get_blank_identifier >=> justSharedCString
 
 nodeGetLiteralValue :: ForeignPtr RedlandNode -> IO String
 nodeGetLiteralValue node =
+  withForeignPtr node $ librdf_node_get_literal_value >=> justSharedCString
+
+nodeGetLiteralValueLanguage :: ForeignPtr RedlandNode -> IO (Maybe String)
+nodeGetLiteralValueLanguage node =
   withForeignPtr node $
-  librdf_node_get_literal_value >=> justSharedCString
+  librdf_node_get_literal_value_language >=> maybeSharedCString
+
+nodeGetLiteralValueDatatypeURI :: ForeignPtr RedlandNode -> IO (Maybe String)
+nodeGetLiteralValueDatatypeURI node =
+  withForeignPtr node $
+  librdf_node_get_literal_value_datatype_uri >=> maybeSharedCString
+
+nodeGetLiteralValueIsWellFormedXML :: ForeignPtr RedlandNode -> IO Bool
+nodeGetLiteralValueIsWellFormedXML node =
+  withForeignPtr node $ fmap (/= 0) . librdf_node_get_literal_value_is_wf_xml
 
 nodeGetURI :: ForeignPtr RedlandNode -> Initializer RedlandURI
 nodeGetURI node =
