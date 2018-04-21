@@ -84,7 +84,7 @@ redlandNodeToNode rn = do
         (_, Just t) -> Just . XMLSchema <$> uriAsString t
         _ -> pure Nothing
       pure $ LiteralNode litVal nType
-    _ -> ResourceNode <$> (nodeGetURI rn >>= uriAsString)
+    _ -> ResourceNode <$> withNew (nodeGetURI rn) uriAsString
 
 -- | A conversion function.
 nodeToRedlandNode :: ForeignPtr RedlandWorld
@@ -186,7 +186,11 @@ statementToTriple statement = do
     componentToTriple f = do
       c <- f statement
       case c of
-        Just c' -> Just <$> redlandNodeToNode c'
+        Just c' -> do
+          n <- redlandNodeToNode c'
+          -- segfaulting without finalization here, not sure why.
+          finalizeForeignPtr c'
+          pure $ Just n
         Nothing -> pure Nothing
 
 -- | A conversion function.
