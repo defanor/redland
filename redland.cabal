@@ -1,5 +1,5 @@
 name:                redland
-version:             0.2.0.2
+version:             0.2.0.3
 synopsis:            Redland RDF library bindings
 description:         This package provides low-level and mid-level
                      Redland RDF library bindings, as well as some

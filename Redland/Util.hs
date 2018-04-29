@@ -181,17 +181,9 @@ statementToTriple statement = do
   pure $ Triple s p o
   where
     componentToTriple :: (ForeignPtr RedlandStatement ->
-                          IO (Maybe (ForeignPtr RedlandNode)))
+                          InitializerMaybe RedlandNode)
                       -> IO (Maybe Node)
-    componentToTriple f = do
-      c <- f statement
-      case c of
-        Just c' -> do
-          n <- redlandNodeToNode c'
-          -- segfaulting without finalization here, not sure why.
-          finalizeForeignPtr c'
-          pure $ Just n
-        Nothing -> pure Nothing
+    componentToTriple f = withNewMaybe (f statement) redlandNodeToNode
 
 -- | A conversion function.
 tripleToStatement :: ForeignPtr RedlandWorld

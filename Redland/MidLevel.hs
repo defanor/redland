@@ -44,6 +44,7 @@ instance Exception RedlandException
 -- todo: move these into a separate module?
 
 type Initializer a = IO (ForeignPtr a)
+type InitializerMaybe a = IO (Maybe (ForeignPtr a))
 
 -- | Initializes a Redland object, throws 'InitializationException' on
 -- failure (i.e., if NULL is returned).
@@ -53,6 +54,15 @@ initialize i f = do
   if p == nullPtr
     then throw InitializationException
     else newForeignPtr f p
+
+-- | Initializes a Redland object, returns 'Nothing' on failure (i.e.,
+-- if NULL is returned).
+initializeMaybe :: IO (Ptr a) -> FinalizerPtr a -> InitializerMaybe a
+initializeMaybe i f = do
+  p <- i
+  if p == nullPtr
+    then pure Nothing
+    else Just <$> newForeignPtr f p
 
 -- | Performs an operation, throws 'OperationException' on failure
 -- (i.e., on non-zero return value).
@@ -67,6 +77,17 @@ perform a = do
 -- sure to call 'finalizeForeignPtr' afterwards.
 withNew :: Initializer a -> (ForeignPtr a -> IO b) -> IO b
 withNew i = bracket i finalizeForeignPtr
+
+-- | Same as 'withNew', but for 'InitializerMaybe'.
+withNewMaybe :: InitializerMaybe a -> (ForeignPtr a -> IO b) -> IO (Maybe b)
+withNewMaybe i f = do
+  mfptr <- i
+  case mfptr of
+    Nothing -> pure Nothing
+    Just fptr -> do
+      ret <- f fptr
+      finalizeForeignPtr fptr
+      pure $ Just ret
 
 -- | An abstraction to use with 'withCString' and 'withForeignPtr'.
 withNullablePtr :: (a -> (Ptr b -> c) -> c) -> Maybe a -> (Ptr b -> c) -> c
@@ -489,14 +510,11 @@ statementFromNodes world subject predicate object =
 -- | An abstraction used for getting statement components.
 statementGet :: (Ptr RedlandStatement -> IO (Ptr RedlandNode))
              -> ForeignPtr RedlandStatement
-             -> IO (Maybe (ForeignPtr RedlandNode))
+             -> InitializerMaybe RedlandNode
 statementGet f statement =
   withForeignPtr statement $ \statement' -> do
   oldNode <- f statement'
-  if oldNode == nullPtr
-    then pure Nothing
-    else Just <$>
-         initialize (librdf_new_node_from_node oldNode) p_librdf_free_node
+  initializeMaybe (librdf_new_node_from_node oldNode) p_librdf_free_node
 
 -- | An abstraction used for setting statement components.
 statementSet :: (Ptr RedlandStatement -> Ptr RedlandNode -> IO ())
@@ -512,7 +530,7 @@ statementSet f statement node =
       f statement' nodeCopy
 
 statementGetSubject :: ForeignPtr RedlandStatement
-                    -> IO (Maybe (ForeignPtr RedlandNode))
+                    -> InitializerMaybe RedlandNode
 statementGetSubject = statementGet librdf_statement_get_subject
 
 statementSetSubject :: ForeignPtr RedlandStatement
@@ -521,7 +539,7 @@ statementSetSubject :: ForeignPtr RedlandStatement
 statementSetSubject = statementSet librdf_statement_set_subject
 
 statementGetPredicate :: ForeignPtr RedlandStatement
-                      -> IO (Maybe (ForeignPtr RedlandNode))
+                      -> InitializerMaybe RedlandNode
 statementGetPredicate = statementGet librdf_statement_get_predicate
 
 statementSetPredicate :: ForeignPtr RedlandStatement
